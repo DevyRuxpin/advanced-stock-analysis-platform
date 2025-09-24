@@ -2,6 +2,8 @@
 
 An AI-powered stock analysis platform that provides comprehensive investment recommendations using cutting-edge technical and fundamental analysis.
 
+![Stock Analysis Platform Screenshot](screenshots/screenshot.png)
+
 ## Features
 
 ### 🤖 AI-Powered Analysis
