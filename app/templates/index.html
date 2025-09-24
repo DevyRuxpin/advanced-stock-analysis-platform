@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Stock Analysis Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="gradient-bg shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-white text-xl font-bold">
+                            <i class="fas fa-chart-line mr-2"></i>
+                            StockAnalyzer AI
+                        </h1>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <div class="text-white text-sm">
+                        <i class="fas fa-brain mr-1"></i>
+                        AI-Powered Analysis
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Hero Section -->
+        <div class="text-center mb-8">
+            <h2 class="text-4xl font-bold text-gray-900 mb-4">
+                Advanced AI Stock Analysis
+            </h2>
+            <p class="text-xl text-gray-600 mb-8">
+                Get AI-powered investment recommendations using cutting-edge technical and fundamental analysis
+            </p>
+        </div>
+
+        <!-- Search Section -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <div class="max-w-2xl mx-auto">
+                <h3 class="text-2xl font-semibold text-gray-900 mb-4 text-center">
+                    <i class="fas fa-search mr-2"></i>
+                    Analyze Any Stock
+                </h3>
+                <div class="flex">
+                    <input 
+                        type="text" 
+                        id="stockSearch" 
+                        placeholder="Enter stock symbol (e.g., AAPL, MSFT, GOOGL)"
+                        class="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                    <button 
+                        onclick="searchStock()" 
+                        class="px-6 py-3 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                    >
+                        <i class="fas fa-chart-bar mr-2"></i>
+                        Analyze
+                    </button>
+                </div>
+                <div id="searchResults" class="mt-4 hidden">
+                    <!-- Search results will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Market Overview -->
+        <div class="mb-8">
+            <h3 class="text-2xl font-semibold text-gray-900 mb-4">
+                <i class="fas fa-globe mr-2"></i>
+                Market Overview
+            </h3>
+            <div id="marketOverview" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Market data will be populated here -->
+            </div>
+        </div>
+
+        <!-- Major Stocks -->
+        <div class="mb-8">
+            <h3 class="text-2xl font-semibold text-gray-900 mb-4">
+                <i class="fas fa-star mr-2"></i>
+                Major Stocks
+            </h3>
+            <div id="majorStocks" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <!-- Major stocks will be populated here -->
+            </div>
+        </div>
+
+        <!-- Analysis Results -->
+        <div id="analysisResults" class="hidden">
+            <!-- Analysis results will be populated here -->
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                    <i class="fas fa-spinner loading text-blue-600"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mt-4">Analyzing Stock...</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p class="text-sm text-gray-500">
+                        Our AI is processing technical indicators, fundamental metrics, and market data to generate your investment recommendation.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentAnalysis = null;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMarketOverview();
+            loadMajorStocks();
+            
+            // Add enter key support for search
+            document.getElementById('stockSearch').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchStock();
+                }
+            });
+        });
+
+        // Load market overview
+        async function loadMarketOverview() {
+            try {
+                const response = await fetch('/api/market/overview');
+                const data = await response.json();
+                displayMarketOverview(data.overview);
+            } catch (error) {
+                console.error('Error loading market overview:', error);
+            }
+        }
+
+        // Display market overview
+        function displayMarketOverview(overview) {
+            const container = document.getElementById('marketOverview');
+            container.innerHTML = '';
+
+            Object.entries(overview).forEach(([name, data]) => {
+                const changeClass = data.change >= 0 ? 'text-green-600' : 'text-red-600';
+                const changeIcon = data.change >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down';
+                
+                container.innerHTML += `
+                    <div class="bg-white rounded-lg shadow-md p-4 card-hover">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="font-semibold text-gray-900">${name}</h4>
+                                <p class="text-sm text-gray-600">${data.symbol}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-lg font-bold">$${data.price}</p>
+                                <p class="text-sm ${changeClass}">
+                                    <i class="${changeIcon} mr-1"></i>
+                                    ${data.change >= 0 ? '+' : ''}${data.change} (${data.change_percent >= 0 ? '+' : ''}${data.change_percent}%)
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Load major stocks
+        async function loadMajorStocks() {
+            try {
+                const response = await fetch('/api/stocks/major');
+                const data = await response.json();
+                displayMajorStocks(data.stocks);
+            } catch (error) {
+                console.error('Error loading major stocks:', error);
+            }
+        }
+
+        // Display major stocks
+        function displayMajorStocks(stocks) {
+            const container = document.getElementById('majorStocks');
+            container.innerHTML = '';
+
+            Object.entries(stocks).slice(0, 12).forEach(([symbol, name]) => {
+                container.innerHTML += `
+                    <div class="bg-white rounded-lg shadow-md p-4 card-hover cursor-pointer" onclick="analyzeStock('${symbol}')">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="font-semibold text-gray-900">${symbol}</h4>
+                                <p class="text-sm text-gray-600 truncate">${name}</p>
+                            </div>
+                            <div class="text-blue-600">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Search for stocks
+        async function searchStock() {
+            const query = document.getElementById('stockSearch').value.trim();
+            if (!query) return;
+
+            try {
+                const response = await fetch(`/api/stocks/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                displaySearchResults(data.results);
+            } catch (error) {
+                console.error('Error searching stocks:', error);
+            }
+        }
+
+        // Display search results
+        function displaySearchResults(results) {
+            const container = document.getElementById('searchResults');
+            
+            if (results.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center">No stocks found</p>';
+                container.classList.remove('hidden');
+                return;
+            }
+
+            container.innerHTML = results.map(stock => `
+                <div class="bg-gray-50 rounded-lg p-3 mb-2 cursor-pointer hover:bg-gray-100" onclick="analyzeStock('${stock.symbol}')">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="font-semibold text-gray-900">${stock.symbol}</span>
+                            <span class="text-gray-600 ml-2">${stock.name}</span>
+                        </div>
+                        <i class="fas fa-arrow-right text-blue-600"></i>
+                    </div>
+                </div>
+            `).join('');
+
+            container.classList.remove('hidden');
+        }
+
+        // Analyze stock
+        async function analyzeStock(symbol) {
+            showLoadingModal();
+            
+            try {
+                const response = await fetch(`/api/analysis/report/${symbol}`);
+                const data = await response.json();
+                currentAnalysis = data.report;
+                displayAnalysisResults(data.report);
+                hideLoadingModal();
+            } catch (error) {
+                console.error('Error analyzing stock:', error);
+                hideLoadingModal();
+                alert('Error analyzing stock. Please try again.');
+            }
+        }
+
+        // Display analysis results
+        function displayAnalysisResults(analysis) {
+            const container = document.getElementById('analysisResults');
+            
+            const recommendation = analysis.recommendation;
+            const score = recommendation.score;
+            const riskLevel = recommendation.risk_level;
+            
+            // Determine recommendation color
+            let recColor = 'gray';
+            if (recommendation.recommendation.includes('BUY')) recColor = 'green';
+            else if (recommendation.recommendation.includes('SELL')) recColor = 'red';
+            
+            container.innerHTML = `
+                <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                    <!-- Header -->
+                    <div class="text-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">${analysis.symbol}</h2>
+                        <h3 class="text-xl text-gray-600 mb-4">${analysis.company_name}</h3>
+                        <div class="flex justify-center items-center space-x-4">
+                            <span class="text-sm text-gray-500">${analysis.sector} • ${analysis.industry}</span>
+                        </div>
+                    </div>
+
+                    <!-- Recommendation Card -->
+                    <div class="bg-gradient-to-r from-${recColor}-50 to-${recColor}-100 rounded-lg p-6 mb-6">
+                        <div class="text-center">
+                            <h3 class="text-2xl font-bold text-${recColor}-800 mb-2">${recommendation.recommendation}</h3>
+                            <div class="flex justify-center items-center space-x-4 mb-4">
+                                <span class="text-lg font-semibold text-${recColor}-700">Score: ${score}/100</span>
+                                <span class="text-lg font-semibold text-gray-700">Risk: ${riskLevel}</span>
+                                <span class="text-lg font-semibold text-gray-700">Confidence: ${Math.round(recommendation.confidence * 100)}%</span>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                Expected Return: ${(recommendation.expected_return * 100).toFixed(2)}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reasons -->
+                    <div class="mb-6">
+                        <h4 class="text-lg font-semibold text-gray-900 mb-3">Analysis Reasons:</h4>
+                        <ul class="list-disc list-inside space-y-1">
+                            ${recommendation.reasons.map(reason => `<li class="text-gray-700">${reason}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <!-- Technical Analysis -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h4 class="text-lg font-semibold text-gray-900 mb-3">Technical Indicators</h4>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">RSI (14):</span>
+                                    <span class="font-semibold">${analysis.technical_analysis.rsi.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">MACD:</span>
+                                    <span class="font-semibold">${analysis.technical_analysis.macd.toFixed(4)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">SMA 20:</span>
+                                    <span class="font-semibold">$${analysis.technical_analysis.sma_20.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">SMA 50:</span>
+                                    <span class="font-semibold">$${analysis.technical_analysis.sma_50.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">SMA 200:</span>
+                                    <span class="font-semibold">$${analysis.technical_analysis.sma_200.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 class="text-lg font-semibold text-gray-900 mb-3">Fundamental Metrics</h4>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">P/E Ratio:</span>
+                                    <span class="font-semibold">${analysis.fundamental_analysis.pe_ratio.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">PEG Ratio:</span>
+                                    <span class="font-semibold">${analysis.fundamental_analysis.peg_ratio.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Beta:</span>
+                                    <span class="font-semibold">${analysis.fundamental_analysis.beta.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">EPS:</span>
+                                    <span class="font-semibold">$${analysis.fundamental_analysis.eps.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Dividend Yield:</span>
+                                    <span class="font-semibold">${(analysis.fundamental_analysis.dividend_yield * 100).toFixed(2)}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-center space-x-4">
+                        <button onclick="saveReport()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-download mr-2"></i>
+                            Save Report
+                        </button>
+                        <button onclick="shareReport()" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-share mr-2"></i>
+                            Share
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            container.classList.remove('hidden');
+            
+            // Scroll to results
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Show loading modal
+        function showLoadingModal() {
+            document.getElementById('loadingModal').classList.remove('hidden');
+        }
+
+        // Hide loading modal
+        function hideLoadingModal() {
+            document.getElementById('loadingModal').classList.add('hidden');
+        }
+
+        // Save report
+        function saveReport() {
+            if (!currentAnalysis) return;
+            
+            const reportText = generateReportText(currentAnalysis);
+            const blob = new Blob([reportText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentAnalysis.symbol}_analysis_report.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Generate report text
+        function generateReportText(analysis) {
+            return `
+STOCK ANALYSIS REPORT
+=====================
+
+Symbol: ${analysis.symbol}
+Company: ${analysis.company_name}
+Sector: ${analysis.sector}
+Industry: ${analysis.industry}
+Analysis Date: ${analysis.analysis_date}
+
+RECOMMENDATION
+==============
+${analysis.recommendation.recommendation}
+Score: ${analysis.recommendation.score}/100
+Risk Level: ${analysis.recommendation.risk_level}
+Confidence: ${Math.round(analysis.recommendation.confidence * 100)}%
+Expected Return: ${(analysis.recommendation.expected_return * 100).toFixed(2)}%
+
+ANALYSIS REASONS
+================
+${analysis.recommendation.reasons.map(reason => `• ${reason}`).join('\n')}
+
+TECHNICAL ANALYSIS
+=================
+RSI (14): ${analysis.technical_analysis.rsi.toFixed(2)}
+MACD: ${analysis.technical_analysis.macd.toFixed(4)}
+MACD Signal: ${analysis.technical_analysis.macd_signal.toFixed(4)}
+SMA 20: $${analysis.technical_analysis.sma_20.toFixed(2)}
+SMA 50: $${analysis.technical_analysis.sma_50.toFixed(2)}
+SMA 200: $${analysis.technical_analysis.sma_200.toFixed(2)}
+Bollinger Upper: $${analysis.technical_analysis.bollinger_upper.toFixed(2)}
+Bollinger Lower: $${analysis.technical_analysis.bollinger_lower.toFixed(2)}
+ATR: ${analysis.technical_analysis.atr.toFixed(2)}
+
+FUNDAMENTAL ANALYSIS
+===================
+P/E Ratio: ${analysis.fundamental_analysis.pe_ratio.toFixed(2)}
+Forward P/E: ${analysis.fundamental_analysis.forward_pe.toFixed(2)}
+PEG Ratio: ${analysis.fundamental_analysis.peg_ratio.toFixed(2)}
+Price to Book: ${analysis.fundamental_analysis.price_to_book.toFixed(2)}
+Beta: ${analysis.fundamental_analysis.beta.toFixed(2)}
+EPS: $${analysis.fundamental_analysis.eps.toFixed(2)}
+Dividend Yield: ${(analysis.fundamental_analysis.dividend_yield * 100).toFixed(2)}%
+Profit Margin: ${(analysis.fundamental_analysis.profit_margin * 100).toFixed(2)}%
+Return on Equity: ${(analysis.fundamental_analysis.return_on_equity * 100).toFixed(2)}%
+Debt to Equity: ${analysis.fundamental_analysis.debt_to_equity.toFixed(2)}
+
+RISK ASSESSMENT
+===============
+Volatility: ${analysis.risk_assessment.volatility.toFixed(4)}
+Beta: ${analysis.risk_assessment.beta.toFixed(2)}
+Risk Level: ${analysis.risk_assessment.risk_level}
+
+DISCLAIMER
+==========
+This analysis is for informational purposes only and should not be considered as investment advice. 
+Please conduct your own research and consult with a financial advisor before making investment decisions.
+            `;
+        }
+
+        // Share report
+        function shareReport() {
+            if (!currentAnalysis) return;
+            
+            const reportText = generateReportText(currentAnalysis);
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: `${currentAnalysis.symbol} Stock Analysis Report`,
+                    text: reportText,
+                    url: window.location.href
+                });
+            } else {
+                // Fallback: copy to clipboard
+                navigator.clipboard.writeText(reportText).then(() => {
+                    alert('Report copied to clipboard!');
+                });
+            }
+        }
+    </script>
+</body>
+</html>
